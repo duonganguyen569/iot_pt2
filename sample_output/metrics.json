@@ -1,0 +1,15 @@
+{
+  "unique_messages": 565,
+  "sequence_gaps": 34,
+  "latency_mean_ms": 47.88043562289888,
+  "latency_p95_ms": 49.02153015136719,
+  "latency_max_ms": 799.9999523162842,
+  "to_processed_mean_ms": 790366.702183158,
+  "to_processed_p95_ms": 1328214.4897937775,
+  "events": {
+    "accepted": 565,
+    "duplicate": 13,
+    "invalid": 16
+  },
+  "mode": "OFFLINE demo: synthetic latency, no MQTT or InfluxDB"
+}

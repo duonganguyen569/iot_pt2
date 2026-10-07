@@ -1,0 +1,72 @@
+x-python: &python
+  build: .
+  restart: unless-stopped
+  volumes:
+    - ./data:/app/data
+  environment: &env
+    SQLITE_PATH: /app/data/iot.db
+    MQTT_HOST: mosquitto
+    MQTT_PORT: 1883
+    MQTT_TOPIC: assignment/sensors
+    INFLUX_URL: http://influxdb:8086
+    INFLUX_ORG: iot-lab
+    INFLUX_BUCKET: sensors
+    INFLUX_TOKEN: ${INFLUX_TOKEN:?Copy .env.example to .env first}
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.0
+    restart: unless-stopped
+    ports: ["127.0.0.1:1883:1883"]
+    volumes:
+      - ./config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - mqtt-data:/mosquitto/data
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_pub -h localhost -t health -m ok -q 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  influxdb:
+    image: influxdb:2.7
+    restart: unless-stopped
+    ports: ["127.0.0.1:8086:8086"]
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: ${INFLUX_USERNAME:-vld1}
+      DOCKER_INFLUXDB_INIT_PASSWORD: ${INFLUX_PASSWORD:?Copy .env.example to .env first}
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${INFLUX_TOKEN:?Copy .env.example to .env first}
+      DOCKER_INFLUXDB_INIT_ORG: iot-lab
+      DOCKER_INFLUXDB_INIT_BUCKET: sensors
+      DOCKER_INFLUXDB_INIT_RETENTION: 0
+    volumes:
+      - influx-data:/var/lib/influxdb2
+      - influx-config:/etc/influxdb2
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  collector:
+    <<: *python
+    command: ["python", "-m", "iot.collector"]
+    depends_on:
+      mosquitto: {condition: service_healthy}
+  worker:
+    <<: *python
+    command: ["python", "-m", "iot.worker"]
+    depends_on:
+      influxdb: {condition: service_healthy}
+  simulator:
+    <<: *python
+    command: ["python", "-m", "iot.simulator"]
+    depends_on:
+      mosquitto: {condition: service_healthy}
+      collector: {condition: service_started}
+  dashboard:
+    <<: *python
+    command: ["python", "-m", "streamlit", "run", "dashboard.py", "--server.address=0.0.0.0", "--server.port=8501", "--browser.gatherUsageStats=false"]
+    ports: ["127.0.0.1:8501:8501"]
+volumes:
+  mqtt-data:
+  influx-data:
+  influx-config:

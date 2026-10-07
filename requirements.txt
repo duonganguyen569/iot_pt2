@@ -1,0 +1,7 @@
+paho-mqtt==2.1.0
+influxdb-client==1.48.0
+pandas==2.2.3
+numpy==2.2.4
+streamlit==1.44.1
+# Pin Arrow for a reproducible, verified dashboard runtime.
+pyarrow==19.0.1
